@@ -1,8 +1,8 @@
 package com.getbase.floatingactionbutton;
 
+import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
@@ -22,7 +22,6 @@ import android.view.animation.Interpolator;
 import android.view.animation.OvershootInterpolator;
 import android.widget.TextView;
 
-@TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH)
 public class FloatingActionsMenu extends ViewGroup {
     public static final int EXPAND_UP = 0;
     public static final int EXPAND_DOWN = 1;
@@ -48,8 +47,8 @@ public class FloatingActionsMenu extends ViewGroup {
 
     private boolean mExpanded;
 
-    private AnimatorSet mExpandAnimation = new AnimatorSet().setDuration(ANIMATION_DURATION);
-    private AnimatorSet mCollapseAnimation = new AnimatorSet().setDuration(ANIMATION_DURATION);
+    private AnimatorSet mExpandAnimation;
+    private AnimatorSet mCollapseAnimation;
     private AddFloatingActionButton mAddButton;
     private RotatingDrawable mRotatingDrawable;
     private int mLabelsStyle;
@@ -74,6 +73,11 @@ public class FloatingActionsMenu extends ViewGroup {
         mLabelsMargin = getResources().getDimensionPixelSize(R.dimen.fab_labels_margin);
         mLabelsVerticalOffset = getResources().getDimensionPixelSize(R.dimen.fab_shadow_offset);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            mExpandAnimation = new AnimatorSet().setDuration(ANIMATION_DURATION);
+            mCollapseAnimation = new AnimatorSet().setDuration(ANIMATION_DURATION);
+        }
+
         TypedArray attr = context.obtainStyledAttributes(attributeSet, R.styleable.FloatingActionsMenu, 0, 0);
         mAddButtonPlusColor = attr.getColor(R.styleable.FloatingActionsMenu_fab_addButtonPlusIconColor, getColor(android.R.color.white));
         mAddButtonColorNormal = attr.getColor(R.styleable.FloatingActionsMenu_fab_addButtonColorNormal, getColor(android.R.color.holo_blue_dark));
@@ -95,6 +99,8 @@ public class FloatingActionsMenu extends ViewGroup {
     }
 
     private static class RotatingDrawable extends LayerDrawable {
+
+
         public RotatingDrawable(Drawable drawable) {
             super(new Drawable[]{drawable});
         }
@@ -115,6 +121,7 @@ public class FloatingActionsMenu extends ViewGroup {
         @Override
         public void draw(Canvas canvas) {
             canvas.save();
+            //TODO?
             canvas.rotate(mRotation, getBounds().centerX(), getBounds().centerY());
             super.draw(canvas);
             canvas.restore();
@@ -138,14 +145,16 @@ public class FloatingActionsMenu extends ViewGroup {
 
                 final OvershootInterpolator interpolator = new OvershootInterpolator();
 
-                final ObjectAnimator collapseAnimator = ObjectAnimator.ofFloat(rotatingDrawable, "rotation", USED_ROTATION, COLLAPSED_PLUS_ROTATION);
-                final ObjectAnimator expandAnimator = ObjectAnimator.ofFloat(rotatingDrawable, "rotation", COLLAPSED_PLUS_ROTATION, USED_ROTATION);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                    final ObjectAnimator collapseAnimator = ObjectAnimator.ofFloat(rotatingDrawable, "rotation", USED_ROTATION, COLLAPSED_PLUS_ROTATION);
+                    final ObjectAnimator expandAnimator = ObjectAnimator.ofFloat(rotatingDrawable, "rotation", COLLAPSED_PLUS_ROTATION, USED_ROTATION);
 
-                collapseAnimator.setInterpolator(interpolator);
-                expandAnimator.setInterpolator(interpolator);
+                    collapseAnimator.setInterpolator(interpolator);
+                    expandAnimator.setInterpolator(interpolator);
 
-                mExpandAnimation.play(expandAnimator);
-                mCollapseAnimation.play(collapseAnimator);
+                    mExpandAnimation.play(expandAnimator);
+                    mCollapseAnimation.play(collapseAnimator);
+                }
 
                 return rotatingDrawable;
             }
@@ -255,28 +264,30 @@ public class FloatingActionsMenu extends ViewGroup {
                     float collapsedTranslation = addButtonY - childY;
                     float expandedTranslation = 0f;
 
-                    child.setTranslationY(mExpanded ? expandedTranslation : collapsedTranslation);
-                    child.setAlpha(mExpanded ? 1f : 0f);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                        child.setTranslationY(mExpanded ? expandedTranslation : collapsedTranslation);
+                        child.setAlpha(mExpanded ? 1f : 0f);
 
-                    LayoutParams params = (LayoutParams) child.getLayoutParams();
-                    params.mCollapseDir.setFloatValues(expandedTranslation, collapsedTranslation);
-                    params.mExpandDir.setFloatValues(collapsedTranslation, expandedTranslation);
-                    params.setAnimationsTarget(child);
+                        LayoutParams params = (LayoutParams) child.getLayoutParams();
+                        params.mCollapseDir.setFloatValues(expandedTranslation, collapsedTranslation);
+                        params.mExpandDir.setFloatValues(collapsedTranslation, expandedTranslation);
+                        params.setAnimationsTarget(child);
 
-                    View label = (View) child.getTag(R.id.fab_label);
-                    if (label != null) {
-                        int labelLeft = labelsRight - label.getMeasuredWidth();
-                        int labelTop = childY - mLabelsVerticalOffset + (child.getMeasuredHeight() - label.getMeasuredHeight()) / 2;
+                        View label = (View) child.getTag(R.id.fab_label);
+                        if (label != null) {
+                            int labelLeft = labelsRight - label.getMeasuredWidth();
+                            int labelTop = childY - mLabelsVerticalOffset + (child.getMeasuredHeight() - label.getMeasuredHeight()) / 2;
 
-                        label.layout(labelLeft, labelTop, labelsRight, labelTop + label.getMeasuredHeight());
+                            label.layout(labelLeft, labelTop, labelsRight, labelTop + label.getMeasuredHeight());
 
-                        label.setTranslationY(mExpanded ? expandedTranslation : collapsedTranslation);
-                        label.setAlpha(mExpanded ? 1f : 0f);
+                            label.setTranslationY(mExpanded ? expandedTranslation : collapsedTranslation);
+                            label.setAlpha(mExpanded ? 1f : 0f);
 
-                        LayoutParams labelParams = (LayoutParams) label.getLayoutParams();
-                        labelParams.mCollapseDir.setFloatValues(expandedTranslation, collapsedTranslation);
-                        labelParams.mExpandDir.setFloatValues(collapsedTranslation, expandedTranslation);
-                        labelParams.setAnimationsTarget(label);
+                            LayoutParams labelParams = (LayoutParams) label.getLayoutParams();
+                            labelParams.mCollapseDir.setFloatValues(expandedTranslation, collapsedTranslation);
+                            labelParams.mExpandDir.setFloatValues(collapsedTranslation, expandedTranslation);
+                            labelParams.setAnimationsTarget(label);
+                        }
                     }
 
                     nextY = expandUp ?
@@ -308,13 +319,15 @@ public class FloatingActionsMenu extends ViewGroup {
                     float collapsedTranslation = addButtonX - childX;
                     float expandedTranslation = 0f;
 
-                    child.setTranslationX(mExpanded ? expandedTranslation : collapsedTranslation);
-                    child.setAlpha(mExpanded ? 1f : 0f);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                        child.setTranslationX(mExpanded ? expandedTranslation : collapsedTranslation);
+                        child.setAlpha(mExpanded ? 1f : 0f);
 
-                    LayoutParams params = (LayoutParams) child.getLayoutParams();
-                    params.mCollapseDir.setFloatValues(expandedTranslation, collapsedTranslation);
-                    params.mExpandDir.setFloatValues(collapsedTranslation, expandedTranslation);
-                    params.setAnimationsTarget(child);
+                        LayoutParams params = (LayoutParams) child.getLayoutParams();
+                        params.mCollapseDir.setFloatValues(expandedTranslation, collapsedTranslation);
+                        params.mExpandDir.setFloatValues(collapsedTranslation, expandedTranslation);
+                        params.setAnimationsTarget(child);
+                    }
 
                     nextX = expandLeft ?
                             childX - mButtonSpacing :
@@ -351,50 +364,59 @@ public class FloatingActionsMenu extends ViewGroup {
 
     private class LayoutParams extends ViewGroup.LayoutParams {
 
-        private ObjectAnimator mExpandDir = new ObjectAnimator();
-        private ObjectAnimator mExpandAlpha = new ObjectAnimator();
-        private ObjectAnimator mCollapseDir = new ObjectAnimator();
-        private ObjectAnimator mCollapseAlpha = new ObjectAnimator();
+        private ObjectAnimator mExpandDir;
+        private ObjectAnimator mExpandAlpha;
+        private ObjectAnimator mCollapseDir;
+        private ObjectAnimator mCollapseAlpha;
 
         public LayoutParams(ViewGroup.LayoutParams source) {
             super(source);
 
-            mExpandDir.setInterpolator(sExpandInterpolator);
-            mExpandAlpha.setInterpolator(sAlphaExpandInterpolator);
-            mCollapseDir.setInterpolator(sCollapseInterpolator);
-            mCollapseAlpha.setInterpolator(sCollapseInterpolator);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
+                mExpandDir = new ObjectAnimator();
+                mExpandAlpha = new ObjectAnimator();
+                mCollapseDir = new ObjectAnimator();
+                mCollapseAlpha = new ObjectAnimator();
 
-            mCollapseAlpha.setProperty(View.ALPHA);
-            mCollapseAlpha.setFloatValues(1f, 0f);
+                mExpandDir.setInterpolator(sExpandInterpolator);
+                mExpandAlpha.setInterpolator(sAlphaExpandInterpolator);
+                mCollapseDir.setInterpolator(sCollapseInterpolator);
+                mCollapseAlpha.setInterpolator(sCollapseInterpolator);
 
-            mExpandAlpha.setProperty(View.ALPHA);
-            mExpandAlpha.setFloatValues(0f, 1f);
+                mCollapseAlpha.setProperty(View.ALPHA);
+                mCollapseAlpha.setFloatValues(1f, 0f);
 
-            switch (mExpandDirection) {
-                case EXPAND_UP:
-                case EXPAND_DOWN:
-                    mCollapseDir.setProperty(View.TRANSLATION_Y);
-                    mExpandDir.setProperty(View.TRANSLATION_Y);
-                    break;
-                case EXPAND_LEFT:
-                case EXPAND_RIGHT:
-                    mCollapseDir.setProperty(View.TRANSLATION_X);
-                    mExpandDir.setProperty(View.TRANSLATION_X);
-                    break;
+                mExpandAlpha.setProperty(View.ALPHA);
+                mExpandAlpha.setFloatValues(0f, 1f);
+
+                switch (mExpandDirection) {
+                    case EXPAND_UP:
+                    case EXPAND_DOWN:
+                        mCollapseDir.setProperty(View.TRANSLATION_Y);
+                        mExpandDir.setProperty(View.TRANSLATION_Y);
+                        break;
+                    case EXPAND_LEFT:
+                    case EXPAND_RIGHT:
+                        mCollapseDir.setProperty(View.TRANSLATION_X);
+                        mExpandDir.setProperty(View.TRANSLATION_X);
+                        break;
+                }
+
+                mExpandAnimation.play(mExpandAlpha);
+                mExpandAnimation.play(mExpandDir);
+
+                mCollapseAnimation.play(mCollapseAlpha);
+                mCollapseAnimation.play(mCollapseDir);
             }
-
-            mExpandAnimation.play(mExpandAlpha);
-            mExpandAnimation.play(mExpandDir);
-
-            mCollapseAnimation.play(mCollapseAlpha);
-            mCollapseAnimation.play(mCollapseDir);
         }
 
         public void setAnimationsTarget(View view) {
-            mCollapseAlpha.setTarget(view);
-            mCollapseDir.setTarget(view);
-            mExpandAlpha.setTarget(view);
-            mExpandDir.setTarget(view);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                mCollapseAlpha.setTarget(view);
+                mCollapseDir.setTarget(view);
+                mExpandAlpha.setTarget(view);
+                mExpandDir.setTarget(view);
+            }
         }
     }
 
@@ -430,8 +452,10 @@ public class FloatingActionsMenu extends ViewGroup {
     public void collapse() {
         if (mExpanded) {
             mExpanded = false;
-            mCollapseAnimation.start();
-            mExpandAnimation.cancel();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                mCollapseAnimation.start();
+                mExpandAnimation.cancel();
+            }
         }
     }
 
@@ -446,8 +470,10 @@ public class FloatingActionsMenu extends ViewGroup {
     public void expand() {
         if (!mExpanded) {
             mExpanded = true;
-            mCollapseAnimation.cancel();
-            mExpandAnimation.start();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                mCollapseAnimation.cancel();
+                mExpandAnimation.start();
+            }
         }
     }
 
@@ -455,8 +481,25 @@ public class FloatingActionsMenu extends ViewGroup {
         return mExpanded;
     }
 
+    public void setExpanded(boolean expanded) {
+        this.mExpanded = expanded;
+    }
+
     public static void setUsedRotation(float usedRotation) {
         FloatingActionsMenu.USED_ROTATION = usedRotation;
+    }
+
+    public AddFloatingActionButton getAddButton() {
+        return mAddButton;
+    }
+
+    public void setRotationAnimatorListener(Animator.AnimatorListener animatorListener) {
+        if (animatorListener != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+                mExpandAnimation.addListener(animatorListener);
+                mCollapseAnimation.addListener(animatorListener);
+            }
+        }
     }
 
     @Override
