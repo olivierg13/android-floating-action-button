@@ -40,6 +40,7 @@ public class FloatingActionsMenu extends ViewGroup {
     private int mAddButtonColorNormal;
     private int mAddButtonColorPressed;
     private int mExpandDirection;
+    private boolean mRotationManual;
 
     private int mButtonSpacing;
     private int mLabelsMargin;
@@ -77,6 +78,7 @@ public class FloatingActionsMenu extends ViewGroup {
         mAddButtonPlusColor = attr.getColor(R.styleable.FloatingActionsMenu_fab_addButtonPlusIconColor, getColor(android.R.color.white));
         mAddButtonColorNormal = attr.getColor(R.styleable.FloatingActionsMenu_fab_addButtonColorNormal, getColor(android.R.color.holo_blue_dark));
         mAddButtonColorPressed = attr.getColor(R.styleable.FloatingActionsMenu_fab_addButtonColorPressed, getColor(android.R.color.holo_blue_light));
+        mRotationManual = attr.getBoolean(R.styleable.FloatingActionsMenu_fab_rotationManual, false);
         mExpandDirection = attr.getInt(R.styleable.FloatingActionsMenu_fab_expandDirection, EXPAND_UP);
         mLabelsStyle = attr.getResourceId(R.styleable.FloatingActionsMenu_fab_labelStyle, 0);
         attr.recycle();
@@ -150,12 +152,15 @@ public class FloatingActionsMenu extends ViewGroup {
         };
 
         mAddButton.setId(R.id.fab_expand_menu_button);
-        mAddButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                toggle();
-            }
-        });
+
+        if (!mRotationManual) {
+            mAddButton.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    toggle();
+                }
+            });
+        }
 
         addView(mAddButton, super.generateDefaultLayoutParams());
     }
